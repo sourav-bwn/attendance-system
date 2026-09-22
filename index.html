@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>AttendEase — Smart Attendance</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+  --p:#10b981; --a:#ef4444; --l:#f59e0b;
+  --brand1:#6d28d9; --brand2:#4f46e5;
+  --card:#ffffff; --bg:#eef2ff;
+  --r:18px;
+}
+html{scroll-behavior:smooth}
+body{
+  margin:0;font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;color:var(--ink);
+  background:#0f0f2a;
+  min-height:100dvh;
+}
+/* top gradient header */
+.header{
+  background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#06b6d4 130%);
+  color:#fff;padding:18px 16px 90px;position:relative;overflow:hidden;
+}
+.header::before{content:'';position:absolute;width:280px;height:280px;right:-80px;top:-80px;background:radial-gradient(circle,rgba(255,255,255,.25),transparent 70%);border-radius:50%}
+.header::after{content:'';position:absolute;width:200px;height:200px;left:-60px;top:40px;background:radial-gradient(circle,rgba(255,255,255,.15),transparent 70%);border-radius:50%}
+.nav{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.logo{width:44px;height:44px;border-radius:14px;background:#fff;display:grid;place-items:center;font-size:24px;flex-shrink:0;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.nav h1{font-size:clamp(19px,4.5vw,24px);margin:0;letter-spacing:-.4px}
+.nav p{margin:1px 0 0;font-size:12.5px;opacity:.85}
+.date-badge{margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+
+.wrap{max-width:720px;margin:-70px auto 0;padding:0 12px 140px;position:relative;z-index:2}
+/* date + class card */
+.meta-card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:0 12px 32px rgba(0,0,0,.25);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:480px){.meta-card{grid-template-columns:1fr}}
+.field label{display:block;font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.field input{width:100%;padding:13px 12px;border-radius:12px;border:1.5px solid var(--line);font:inherit;font-weight:700;font-size:15px;background:#f8fafc;min-height:48px}
+.field input:focus{outline:none;border-color:var(--brand2);background:#fff}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+@media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border-radius:16px;padding:12px 10px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.12);border-top:4px solid #ddd}
+.stat small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+.stat b{font-size:clamp(20px,5.5vw,26px);line-height:1.2}
+.stat.t{border-color:#6366f1}.stat.p{border-color:var(--p)}.stat.p b{color:#059669}
+.stat.a{border-color:var(--a)}.stat.a b{color:#dc2626}.stat.r{border-color:#06b6d4}
+.bar{height:10px;background:rgba(255,255,255,.9);border-radius:99px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+.bar i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399,#22d3ee);transition:width .5s;border-radius:99px}
+.bar-label{color:#fff;font-size:12.5px;font-weight:700;margin:8px 2px 0;display:flex;justify-content:space-between;text-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* quick actions - horizontal scroll on mobile */
+.qa{display:flex;gap:8px;overflow-x:auto;margin:12px 0;padding:2px;scrollbar-width:none}
+.qa::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;border:none;border-radius:999px;padding:12px 16px;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;min-height:46px;background:#fff;color:var(--ink);box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.chip:active{transform:scale(.96)}
+.chip.green{background:#10b981;color:#fff}
+.chip.red{background:#fee2e2;color:#991b1b}
+.chip.dark{background:#0f172a;color:#fff}
+
+/* search + filters */
+.panel{background:var(--card);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.18);overflow:hidden}
+.searchbox{padding:12px 12px 6px}
+.searchbox input{width:100%;padding:14px 14px 14px 44px;border-radius:14px;border:1.5px solid var(--line);font:inherit;font-size:16px;background:#f8fafc;min-height:52px}
+.searchbox input:focus{outline:none;border-color:var(--brand2);background:#fff}
+.search-wrap{position:relative}
+.search-wrap span{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:19px}
+.filters{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 12px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.f{flex-shrink:0;border:1.5px solid var(--line);background:#f8fafc;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;min-height:44px}
+.f.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.f .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* student cards */
+.list{padding:6px 12px 12px;display:grid;gap:10px}
+@media(min-width:640px){.list{grid-template-columns:1fr 1fr}}
+.card{background:#f8fafc;border:1.5px solid var(--line);border-radius:16px;padding:12px;transition:.2s}
+.card.marked-P{border-color:#a7f3d0;background:#f0fdf4}
+.card.marked-A{border-color:#fecaca;background:#fef2f2}
+.card.marked-L{border-color:#fde68a;background:#fffbeb}
+.card-top{display:flex;align-items:center;gap:10px}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0}
+.who{min-width:0;flex:1}
+.who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uid{font-family:ui-monospace,monospace;font-size:11.5px;font-weight:700;background:#e2e8f0;color:#334155;padding:3px 8px;border-radius:7px;display:inline-block;margin-top:3px}
+.del{border:none;background:none;font-size:18px;cursor:pointer;opacity:.45;padding:8px;min-width:44px;min-height:44px}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.seg button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px 4px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:48px;transition:.15s}
+.seg button:active{transform:scale(.95)}
+.seg button.sP{background:var(--p);border-color:var(--p);color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.4)}
+.seg button.sA{background:var(--a);border-color:var(--a);color:#fff;box-shadow:0 4px 12px rgba(239,68,68,.4)}
+.seg button.sL{background:var(--l);border-color:var(--l);color:#fff;box-shadow:0 4px 12px rgba(245,158,11,.4)}
+.num{font-size:11px;color:#94a3b8;font-weight:800}
+
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .big{font-size:44px}
+
+/* roster */
+details.roster{margin-top:12px;background:var(--card);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.18);overflow:hidden}
+details.roster summary{padding:16px;font-weight:800;cursor:pointer;list-style:none;font-size:15px;min-height:52px}
+details.roster summary::-webkit-details-marker{display:none}
+.roster-body{padding:0 14px 16px;display:grid;gap:8px}
+.roster-body input{padding:13px;border-radius:12px;border:1.5px solid var(--line);font:inherit;font-size:15px;width:100%;min-height:48px}
+.roster-btns{display:flex;gap:8px;flex-wrap:wrap}
+.hint2{font-size:12.5px;color:var(--muted);line-height:1.6;background:#f8fafc;border-radius:12px;padding:10px 12px}
+.hint2 code{background:#e2e8f0;padding:1px 6px;border-radius:6px;font-size:11.5px}
+
+/* sticky bottom export bar */
+.bottombar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.bb-inner{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.bb-info{flex:1;min-width:0;font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4}
+.bb-info b{color:var(--ink);font-size:14px}
+.export{border:none;border-radius:14px;padding:15px 20px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;min-height:54px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 8px 20px rgba(16,185,129,.4);flex-shrink:0}
+.export:active{transform:scale(.96)}
+.iconbtn{border:1.5px solid var(--line);background:#fff;border-radius:14px;min-width:54px;min-height:54px;font-size:20px;cursor:pointer;flex-shrink:0}
+
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:#0f172a;color:#fff;padding:13px 20px;border-radius:999px;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:.3s;z-index:99;max-width:90vw;text-align:center;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* admin */
+.admin-btn{margin-left:8px;flex-shrink:0;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);color:#fff;border-radius:12px;padding:8px 12px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:44px;backdrop-filter:blur(8px)}
+.modal{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+.modal.open{display:flex}
+.sheet{background:#fff;width:100%;max-width:720px;max-height:92dvh;border-radius:20px 20px 0 0;overflow:hidden;display:flex;flex-direction:column;animation:up .25s ease}
+@keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
+@media(min-width:640px){.modal{align-items:center;padding:20px}.sheet{border-radius:20px}}
+.sheet-head{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#0f172a,#334155);color:#fff}
+.sheet-head b{font-size:16px}
+.sheet-head .x{margin-left:auto;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:10px;min-width:44px;min-height:44px;font-size:18px;cursor:pointer}
+.tabs{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;border:none;background:#f1f5f9;border-radius:999px;padding:11px 16px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:44px}
+.tab.on{background:#0f172a;color:#fff}
+.sheet-body{padding:14px;overflow:auto;display:grid;gap:12px}
+.opt{background:#f8fafc;border:1.5px solid var(--line);border-radius:14px;padding:12px}
+.opt h4{margin:0 0 4px;font-size:14px}
+.opt p{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.opt input[type=file],.opt textarea{width:100%;font:inherit}
+.opt textarea{border:1.5px solid var(--line);border-radius:12px;padding:12px;min-height:110px;font-size:14px;resize:vertical}
+.drop{border:2px dashed #c7d2fe;background:#eef2ff;border-radius:14px;padding:18px;text-align:center;font-weight:700;font-size:14px;color:#4338ca;cursor:pointer}
+.mode{display:flex;gap:8px}
+.mode label{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px;text-align:center;font-weight:800;font-size:13px;cursor:pointer;background:#fff}
+.mode input{display:none}
+.mode label:has(input:checked){background:#0f172a;color:#fff;border-color:#0f172a}
+.preview{max-height:180px;overflow:auto;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px 12px;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.6}
+.mrow{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.mrow b{font-size:14px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .uid{margin:0}
+.mini{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;min-height:44px}
+.mini.danger{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+.mini.primary{background:#0f172a;color:#fff;border-color:#0f172a}
+.pinbox{display:flex;gap:8px}
+.pinbox input{flex:1;padding:14px;border-radius:12px;border:1.5px solid var(--line);font:inherit;font-size:18px;text-align:center;letter-spacing:6px;min-height:54px}
+.checks{display:grid;gap:8px}
+.checks label{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;min-height:50px}
+.checks input{width:20px;height:20px;accent-color:#4f46e5}
+@media print{.header,.qa,.bottombar,.roster,details.roster,.searchbox,.filters{display:none!important}body{background:#fff}.wrap{margin:0;max-width:100%}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="nav">
+    <div class="logo">📋</div>
+    <div><h1>AttendEase</h1><p>Fast • Beautiful • Excel-ready</p></div>
+    <div class="date-badge" id="dateBadge">📅 —</div>
+    <button class="admin-btn" onclick="openAdmin()">＋ Students</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="meta-card">
+    <div class="field"><label>📅 Attendance date</label><input type="date" id="attDate"></div>
+    <div class="field"><label>🏫 Class / Subject</label><input type="text" id="className" value="Batch A" maxlength="40"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat t"><small>Total</small><b id="sTotal">0</b></div>
+    <div class="stat p"><small>✅ Present</small><b id="sPresent">0</b></div>
+    <div class="stat a"><small>❌ Absent</small><b id="sAbsent">0</b></div>
+    <div class="stat r"><small>📊 %</small><b id="sRate">0%</b></div>
+  </div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="bar-label"><span id="markedLabel">0 marked</span><span id="leaveLabel"></span></div>
+
+  <div class="qa">
+    <button class="chip green" onclick="markAll('P')">✓ All Present</button>
+    <button class="chip red" onclick="markAll('A')">✕ All Absent</button>
+    <button class="chip dark" onclick="markAll('')">↺ Reset</button>
+    <button class="chip" onclick="showUnmarked()">⚠ Unmarked</button>
+  </div>
+
+  <div class="panel">
+    <div class="searchbox">
+      <div class="search-wrap"><span>🔍</span><input id="search" placeholder="Search name or UID…" oninput="render()" autocomplete="off"></div>
+    </div>
+    <div class="filters" id="filters">
+      <button class="f on" data-f="all" onclick="setFilter('all')">All</button>
+      <button class="f" data-f="P" onclick="setFilter('P')"><i class="dot" style="background:#10b981"></i>Present</button>
+      <button class="f" data-f="A" onclick="setFilter('A')"><i class="dot" style="background:#ef4444"></i>Absent</button>
+      <button class="f" data-f="L" onclick="setFilter('L')"><i class="dot" style="background:#f59e0b"></i>Leave</button>
+      <button class="f" data-f="unmarked" onclick="setFilter('unmarked')">Unmarked</button>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="empty" id="empty" style="display:none"><div class="big">🔎</div><b>No students found</b><br>Try another search or filter.</div>
+  </div>
+
+  <details class="roster">
+    <summary>👥 Roster — pre-loaded UID & names ⚙️</summary>
+    <div class="roster-body">
+      <input id="newUID" placeholder="UID  e.g. 24CS001" autocomplete="off">
+      <input id="newName" placeholder="Full name  e.g. Priya Verma" autocomplete="off">
+      <div class="roster-btns">
+        <button class="chip dark" onclick="addStudent()">+ Add student</button>
+        <button class="chip" onclick="resetRoster()">↺ Restore default</button>
+        <button class="chip red" onclick="clearRoster()">🗑 Clear</button>
+      </div>
+      <div class="hint2">To permanently preload for everyone, edit <code>PRELOADED_STUDENTS</code> in <code>index.html</code>. Excel exports <b>S.No | UID | Name | Status | Date | Class | Remarks</b> + Summary sheet.</div>
+    </div>
+  </details>
+
+</div>
+
+<div class="bottombar">
+  <div class="bb-inner">
+    <div class="bb-info" id="saveNote">● Ready<br><b>Tap P / A / L per student</b></div>
+    <button class="iconbtn" onclick="downloadCSV()" title="CSV backup">⬇</button>
+    <button class="export" onclick="exportExcel()">📥 Excel</button>
+  </div>
+</div>
+
+<div class="modal" id="adminModal" onclick="if(event.target===this)closeAdmin()">
+  <div class="sheet">
+    <div class="sheet-head"><span style="font-size:22px">🔐</span><b>Add Students</b><button class="x" onclick="closeAdmin()">✕</button></div>
+    <div class="sheet-body" id="pinGate">
+      <div class="opt" style="text-align:center">
+        <h4>🔑 Enter Admin Password</h4>
+        <p>Default password: <b>admin123</b></p>
+        <div class="pinbox"><input id="pinInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlockAdmin()" style="letter-spacing:1px;text-align:left" autocomplete="off"><button class="mini primary" onclick="unlockAdmin()">Go</button></div>
+      </div>
+    </div>
+    <div class="sheet-body" id="adminBody" style="display:none">
+      <div class="opt">
+        <h4>➕ Add New Student</h4>
+        <p>Fill all 4 fields, then tap Add.</p>
+        <input id="fUID" placeholder="UID  e.g. 24CS001" autocomplete="off" style="border:1.5px solid var(--line);border-radius:12px;padding:13px;width:100%;font:inherit;margin-bottom:8px">
+        <input id="fName" placeholder="Student name  e.g. Priya Verma" autocomplete="off" style="border:1.5px solid var(--line);border-radius:12px;padding:13px;width:100%;font:inherit;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="fDept" placeholder="Department  e.g. CSE" list="deptList" autocomplete="off" style="border:1.5px solid var(--line);border-radius:12px;padding:13px;width:100%;font:inherit">
+          <select id="fYear" style="border:1.5px solid var(--line);border-radius:12px;padding:13px;width:100%;font:inherit;font-weight:700">
+            <option value="">Year…</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
+          </select>
+        </div>
+        <datalist id="deptList"><option value="CSE"></option><option value="ECE"></option><option value="EEE"></option><option value="ME"></option><option value="CE"></option><option value="IT"></option></datalist>
+        <div style="height:10px"></div>
+        <button class="mini primary" onclick="addStudentFull()" style="width:100%;padding:15px;font-size:15px;border-radius:14px">＋ Add Student</button>
+      </div>
+      <div class="opt" style="text-align:center">
+        <h4>📤 Or upload Excel / CSV</h4>
+        <p>Columns: <b>UID | Name | Department | Year</b>. <a href="#" onclick="downloadTemplate();return false" style="color:#4f46e5;font-weight:800">Download sample</a></p>
+        <label class="drop" style="display:block;font-size:15px;padding:22px">📁 Tap to choose file<input type="file" id="fileUp" accept=".xlsx,.xls,.csv" hidden onchange="handleFile(this)"></label>
+        <div style="height:10px"></div>
+        <div class="preview" id="preview">No file chosen yet.</div>
+        <div style="height:10px"></div>
+        <button class="mini primary" id="importBtn" onclick="confirmImport()" style="width:100%;padding:14px;border-radius:14px" disabled>✅ Add Uploaded Students</button>
+      </div>
+      <div class="opt">
+        <h4>All Students: <span id="mgCount">0</span> <button class="mini danger" style="float:right" onclick="if(confirm('Remove ALL students?')){clearRoster();renderManage()}">Clear</button></h4>
+        <div style="height:8px"></div>
+        <div id="mgList" style="display:grid;gap:8px;max-height:240px;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================================================
+   ✏️ YOUR PRE-LOADED STUDENTS — EDIT HERE
+   Fields: uid, name, dept, year
+   To change admin password, edit DEFAULT_PIN below.
+   ================================================ */
+const DEFAULT_PIN = "admin123";
+const PRELOADED_STUDENTS = [
+  { uid: "STU001", name: "Aarav Sharma", dept: "CSE", year: "1st Year" },
+  { uid: "STU002", name: "Diya Patel", dept: "ECE", year: "1st Year" },
+  { uid: "STU003", name: "Kabir Singh", dept: "CSE", year: "2nd Year" },
+  { uid: "STU004", name: "Ananya Iyer", dept: "IT", year: "2nd Year" },
+  { uid: "STU005", name: "Vivaan Mehta", dept: "ME", year: "1st Year" },
+  { uid: "STU006", name: "Ishita Rao", dept: "CSE", year: "3rd Year" },
+  { uid: "STU007", name: "Arjun Nair", dept: "EEE", year: "2nd Year" },
+  { uid: "STU008", name: "Sanya Kapoor", dept: "CE", year: "1st Year" },
+  { uid: "STU009", name: "Reyansh Gupta", dept: "CSE", year: "4th Year" },
+  { uid: "STU010", name: "Navya Reddy", dept: "ECE", year: "3rd Year" },
+  { uid: "STU011", name: "Krishna Yadav", dept: "IT", year: "1st Year" },
+  { uid: "STU012", name: "Aadhya Menon", dept: "CSE", year: "2nd Year" },
+];
+
+const COLORS = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ec4899","#14b8a6","#f97316"];
+let students = [], attendance = {}, curFilter = 'all';
+const $ = id => document.getElementById(id);
+const todayStr = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+function init(){
+  $('attDate').value = todayStr();
+  $('attDate').addEventListener('change', ()=>{ loadDay(); render(); });
+  const sc = localStorage.getItem('attease_class');
+  if(sc) $('className').value = sc;
+  $('className').addEventListener('input', e=> localStorage.setItem('attease_class', e.target.value));
+  try{
+    const s = JSON.parse(localStorage.getItem('attease_roster')||'null');
+    students = (Array.isArray(s)&&s.length)? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
+  }catch{ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); }
+  students = students.map(s=>({uid:s.uid||'',name:s.name||'',dept:s.dept||'',year:s.year||''}));
+  loadDay(); render();
+}
+const dayKey = () => 'attease_'+$('attDate').value;
+function loadDay(){ try{ attendance=JSON.parse(localStorage.getItem(dayKey())||'{}'); }catch{ attendance={}; } }
+function saveDay(){
+  localStorage.setItem(dayKey(), JSON.stringify(attendance));
+  const p=Object.keys(attendance).length;
+  $('saveNote').innerHTML = '● Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'<br><b>'+p+'/'+students.length+' marked</b>';
+}
+const saveRoster = () => localStorage.setItem('attease_roster', JSON.stringify(students));
+
+function setStatus(uid,st){ attendance[uid]=st; saveDay(); render(); }
+function markAll(st){
+  attendance = st==='' ? {} : Object.fromEntries(students.map(s=>[s.uid,st]));
+  saveDay(); render();
+  toast(st===''?'↺ Cleared':st==='P'?'✓ All present':st==='A'?'✕ All absent':'Done');
+}
+function setFilter(f){
+  curFilter=f;
+  document.querySelectorAll('#filters .f').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+  render();
+}
+function showUnmarked(){ setFilter('unmarked'); document.querySelector('.panel').scrollIntoView({behavior:'smooth'}); }
+function addStudent(){
+  const uid=$('newUID').value.trim(), name=$('newName').value.trim();
+  if(!uid||!name) return toast('Enter UID + Name');
+  if(students.some(s=>s.uid.toLowerCase()===uid.toLowerCase())) return toast('UID exists');
+  students.push({uid,name,dept:'',year:''}); saveRoster();
+  $('newUID').value='';$('newName').value=''; render(); if($('mgList')) renderManage(); toast('Added '+name+' ✓');
+}
+function addStudentFull(){
+  const uid=$('fUID').value.trim(), name=$('fName').value.trim(),
+        dept=$('fDept').value.trim(), year=$('fYear').value;
+  if(!uid) return toast('Enter UID');
+  if(!name) return toast('Enter student name');
+  if(!dept) return toast('Enter department');
+  if(!year) return toast('Select year');
+  if(students.some(s=>s.uid.toLowerCase()===uid.toLowerCase())) return toast('UID already exists');
+  students.push({uid,name,dept,year}); saveRoster(); render(); renderManage();
+  $('fUID').value='';$('fName').value='';$('fDept').value='';$('fYear').value='';
+  toast('Added '+name+' ✓');
+}
+function removeStudent(uid){
+  if(!confirm('Remove '+uid+'?')) return;
+  students=students.filter(s=>s.uid!==uid); delete attendance[uid];
+  saveRoster(); saveDay(); render(); if($('mgList')) renderManage();
+}
+function resetRoster(){ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); saveRoster(); render(); if($('mgList')) renderManage(); toast('Default restored'); }
+function clearRoster(){ if(!confirm('Clear all?'))return; students=[];attendance={}; saveRoster(); saveDay(); render(); if($('mgList')) renderManage(); }
+
+const col = n => { let h=0; for(const c of n)h+=c.charCodeAt(0); return COLORS[h%COLORS.length]; };
+const ini = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const esc = s => s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function render(){
+  const q=$('search').value.trim().toLowerCase();
+  $('dateBadge').textContent='📅 '+($('attDate').value||todayStr());
+  const list=students.filter(s=>
+    (!q||s.uid.toLowerCase().includes(q)||s.name.toLowerCase().includes(q)||(s.dept||'').toLowerCase().includes(q)||(s.year||'').toLowerCase().includes(q)) &&
+    (curFilter==='all'||(curFilter==='unmarked'?!attendance[s.uid]:attendance[s.uid]===curFilter))
+  );
+  const box=$('list'); box.innerHTML='';
+  $('empty').style.display=list.length?'none':'block';
+  list.forEach((s,i)=>{
+    const st=attendance[s.uid]||'';
+    const meta=[s.dept,s.year].filter(Boolean).join(' • ');
+    const d=document.createElement('div');
+    d.className='card'+(st?' marked-'+st:'');
+    d.innerHTML=
+      '<div class="card-top"><div class="avatar" style="background:'+col(s.name)+'">'+esc(ini(s.name))+'</div>'+
+      '<div class="who"><span class="num">'+String(i+1).padStart(2,'0')+'</span> <b>'+esc(s.name)+'</b><br><span class="uid">'+esc(s.uid)+'</span>'+(meta?'<br><span style="font-size:11.5px;color:#64748b;font-weight:700">'+esc(meta)+'</span>':'')+'</div>'+
+      '<button class="del" onclick="removeStudent(\''+esc(s.uid)+'\')" title="Remove">⋯</button></div>'+
+      '<div class="seg"><button class="'+(st==='P'?'sP':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'P\')">✓ P</button>'+
+      '<button class="'+(st==='A'?'sA':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'A\')">✕ A</button>'+
+      '<button class="'+(st==='L'?'sL':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'L\')">⏳ L</button></div>';
+    box.appendChild(d);
+  });
+  const t=students.length,
+    p=students.filter(s=>attendance[s.uid]==='P').length,
+    a=students.filter(s=>attendance[s.uid]==='A').length,
+    l=students.filter(s=>attendance[s.uid]==='L').length;
+  const rate=t?Math.round(p/t*100):0;
+  $('sTotal').textContent=t; $('sPresent').textContent=p;
+  $('sAbsent').textContent=a; $('sRate').textContent=rate+'%';
+  $('bar').style.width=rate+'%';
+  $('markedLabel').textContent=(p+a+l)+'/'+t+' marked • '+rate+'% present';
+  $('leaveLabel').textContent=l?('⏳ '+l+' on leave'):'';
+  if(Object.keys(attendance).length) saveDaySilent();
+}
+function saveDaySilent(){
+  localStorage.setItem(dayKey(), JSON.stringify(attendance));
+  $('saveNote').innerHTML='● Auto-saved<br><b>'+Object.keys(attendance).length+'/'+students.length+' marked</b>';
+}
+function getXlOpts(){
+  try{ return Object.assign({sno:false,uid:true,name:true,status:true,date:false,cls:false,stfmt:'short'}, JSON.parse(localStorage.getItem('attease_xl')||'{}')); }
+  catch{ return {sno:false,uid:true,name:true,status:true,date:false,cls:false,stfmt:'short'}; }
+}
+function statusText(st){
+  const o=getXlOpts();
+  if(o.stfmt==='long') return st==='P'?'Present':st==='A'?'Absent':st==='L'?'Leave':'Unmarked';
+  return st||'-';
+}
+function rows(){
+  const o=getXlOpts(), date=$('attDate').value||todayStr(), cls=$('className').value||'';
+  return students.map((s,i)=>{
+    const r={};
+    if(o.sno) r['S.No']=i+1;
+    if(o.uid) r['UID']=s.uid;
+    if(o.name) r['Name']=s.name;
+    r['Department']=s.dept||'';
+    r['Year']=s.year||'';
+    r['Status']=statusText(attendance[s.uid]||'');
+    if(o.date) r['Date']=date;
+    if(o.cls) r['Class']=cls;
+    return r;
+  });
+}
+function exportExcel(){
+  if(!students.length) return toast('No students');
+  const u=students.filter(s=>!attendance[s.uid]).length;
+  if(u>0&&!confirm(u+' unmarked. Export anyway?')) return;
+  const date=$('attDate').value||todayStr();
+  const cls=($('className').value||'attendance').replace(/[\\/:*?"<>|]/g,'-').slice(0,28);
+  const o=getXlOpts(), wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows());
+  const widths={ 'S.No':6,'UID':14,'Name':24,'Department':14,'Year':12,'Status':10,'Date':13,'Class':18 };
+  ws['!cols']=Object.keys(rows()[0]||{UID:1,Name:1,Status:1}).map(k=>({wch:widths[k]||16}));
+  XLSX.utils.book_append_sheet(wb,ws,'Attendance');
+  const t=students.length,
+    p=students.filter(s=>attendance[s.uid]==='P').length,
+    a=students.filter(s=>attendance[s.uid]==='A').length,
+    l=students.filter(s=>attendance[s.uid]==='L').length;
+  const ws2=XLSX.utils.json_to_sheet([
+    {'Field':'Class','Value':$('className').value},
+    {'Field':'Date','Value':date},{'Field':'Total','Value':t},
+    {'Field':'Present','Value':p},{'Field':'Absent','Value':a},
+    {'Field':'Leave','Value':l},{'Field':'% Present','Value':(t?Math.round(p/t*100):0)+'%'}]);
+  ws2['!cols']=[{wch:14},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+  XLSX.writeFile(wb,'Attendance_'+cls+'_'+date+'.xlsx');
+  toast('✨ Excel generated (UID + Name + Dept + Year + Status)');
+}
+function downloadCSV(){
+  const ws=XLSX.utils.json_to_sheet(rows());
+  const blob=new Blob([XLSX.utils.sheet_to_csv(ws)],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='Attendance_'+($('attDate').value||todayStr())+'.csv'; a.click(); toast('CSV downloaded');
+}
+/* ---------- ADMIN (simple + password) ---------- */
+let pendingImport=[];
+function openAdmin(){
+  $('adminModal').classList.add('open');
+  const unlocked = sessionStorage.getItem('attease_admin')==='1';
+  $('pinGate').style.display = unlocked?'none':'grid';
+  $('adminBody').style.display = unlocked?'grid':'none';
+  if(unlocked){ renderManage(); $('preview').textContent='No file chosen yet.'; const b=$('importBtn'); if(b) b.disabled=true; pendingImport=[]; }
+  else { setTimeout(()=>$('pinInput')&&$('pinInput').focus(),200); }
+}
+function closeAdmin(){ $('adminModal').classList.remove('open'); pendingImport=[]; const p=$('pinInput'); if(p) p.value=''; }
+function unlockAdmin(){
+  const v=($('pinInput').value||'').trim();
+  const saved=localStorage.getItem('attease_pin')||DEFAULT_PIN;
+  if(v===saved){
+    sessionStorage.setItem('attease_admin','1');
+    $('pinGate').style.display='none'; $('adminBody').style.display='grid';
+    renderManage(); toast('Welcome ✓');
+  } else toast('Wrong password');
+}
+function normKey(k){ return String(k||'').trim().toLowerCase().replace(/[^a-z]/g,''); }
+function handleFile(inp){
+  const f=inp.files[0]; if(!f) return;
+  $('preview').textContent='Reading '+f.name+'…';
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(arr.length<2){ $('preview').textContent='No students found in file.'; return; }
+      const head=arr[0].map(normKey);
+      let ui=head.findIndex(h=>['uid','id','roll','rollno','enroll','enrollment','regno','reg'].includes(h));
+      let ni=head.findIndex(h=>['name','fullname','student','studentname','sname'].includes(h));
+      let di=head.findIndex(h=>['dept','department','branch','course'].includes(h));
+      let yi=head.findIndex(h=>['year','yr','class','semester','sem'].includes(h));
+      if(ui<0) ui=0; if(ni<0) ni=1;
+      pendingImport=arr.slice(1).map(r=>({uid:String(r[ui]||'').trim(),name:String(r[ni]||'').trim(),dept:di>=0?String(r[di]||'').trim():'',year:yi>=0?String(r[yi]||'').trim():''}))
+        .filter(r=>r.uid&&r.name);
+      if(pendingImport.length){
+        $('preview').innerHTML='✅ <b>'+pendingImport.length+'</b> students found<br>'+pendingImport.slice(0,4).map(r=>esc(r.uid)+' — '+esc(r.name)).join('<br>')+(pendingImport.length>4?'<br>…':'');
+        $('importBtn').disabled=false;
+      } else $('preview').textContent='No valid rows. Make first row: UID | Name';
+    }catch(err){ $('preview').textContent='Could not read file. Try .csv'; }
+  };
+  rd.readAsArrayBuffer(f); inp.value='';
+}
+function confirmImport(){
+  if(!pendingImport.length) return toast('Choose a file first');
+  const have=new Set(students.map(s=>s.uid.toLowerCase()));
+  let added=0;
+  pendingImport.forEach(r=>{ if(!have.has(r.uid.toLowerCase())){ students.push(r); have.add(r.uid.toLowerCase()); added++; } });
+  saveRoster(); render(); renderManage(); pendingImport=[];
+  $('preview').textContent='Done ✓ Choose another file to add more.';
+  $('importBtn').disabled=true;
+  toast('Added '+added+' students ✓');
+}
+function importPaste(){
+  const lines=$('pasteBox').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const out=[];
+  for(const ln of lines){
+    const parts=ln.split(/[,;\t|]+/).map(s=>s.trim());
+    let uid='',name='';
+    if(parts.length>=2){ uid=parts[0]; name=parts.slice(1).join(' '); }
+    else { const m=ln.match(/^(\S+)\s+(.+)$/); if(m){ uid=m[1]; name=m[2]; } }
+    if(uid&&name) out.push({uid,name});
+  }
+  if(!out.length) return toast('Type: UID, Name');
+  pendingImport=out; confirmImport(); $('pasteBox').value='';
+}
+function downloadTemplate(){
+  const ws=XLSX.utils.json_to_sheet([{UID:'24CS001',Name:'Priya Verma',Department:'CSE',Year:'1st Year'},{UID:'24CS002',Name:'Rahul Kumar',Department:'ECE',Year:'1st Year'}]);
+  ws['!cols']=[{wch:14},{wch:24},{wch:14},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Students');
+  XLSX.writeFile(wb,'students_template.xlsx'); toast('Sample file downloaded');
+}
+function renderManage(){
+  if(!$('mgCount')) return;
+  $('mgCount').textContent=students.length;
+  const box=$('mgList'); if(!box) return; box.innerHTML='';
+  students.forEach(s=>{
+    const meta=[s.dept,s.year].filter(Boolean).join(' • ');
+    const d=document.createElement('div'); d.className='mrow';
+    d.innerHTML='<span class="uid">'+esc(s.uid)+'</span><b>'+esc(s.name)+(meta?'<br><small style="color:#64748b">'+esc(meta)+'</small>':'')+'</b><button class="mini danger" onclick="removeStudent(\''+esc(s.uid)+'\');renderManage()">✕</button>';
+    box.appendChild(d);
+  });
+}
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+init();
+</script>
+</body>
+</html>
