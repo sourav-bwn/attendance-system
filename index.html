@@ -318,7 +318,7 @@ function init(){
   $('className').addEventListener('input', e=> localStorage.setItem('attease_class', e.target.value));
   try{
     const s = JSON.parse(localStorage.getItem('attease_roster')||'null');
-    students = (Array.isArray(s)&&s.length)? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
+    students = Array.isArray(s) ? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
   }catch{ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); }
   students = students.map(s=>({uid:s.uid||'',name:s.name||'',dept:s.dept||'',year:s.year||''}));
   loadDay(); render();
@@ -392,10 +392,14 @@ function render(){
     d.innerHTML=
       '<div class="card-top"><div class="avatar" style="background:'+col(s.name)+'">'+esc(ini(s.name))+'</div>'+
       '<div class="who"><span class="num">'+String(i+1).padStart(2,'0')+'</span> <b>'+esc(s.name)+'</b><br><span class="uid">'+esc(s.uid)+'</span>'+(meta?'<br><span style="font-size:11.5px;color:#64748b;font-weight:700">'+esc(meta)+'</span>':'')+'</div>'+
-      '<button class="del" onclick="removeStudent(\''+esc(s.uid)+'\')" title="Remove">⋯</button></div>'+
-      '<div class="seg"><button class="'+(st==='P'?'sP':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'P\')">✓ P</button>'+
-      '<button class="'+(st==='A'?'sA':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'A\')">✕ A</button>'+
-      '<button class="'+(st==='L'?'sL':'')+'" onclick="setStatus(\''+esc(s.uid)+'\',\'L\')">⏳ L</button></div>';
+      '<button class="del" title="Remove">⋯</button></div>'+
+      '<div class="seg"><button class="'+(st==='P'?'sP':'')+'">✓ P</button>'+
+      '<button class="'+(st==='A'?'sA':'')+'">✕ A</button>'+
+      '<button class="'+(st==='L'?'sL':'')+'">⏳ L</button></div>';
+    d.querySelector('.del').addEventListener('click', () => removeStudent(s.uid));
+    d.querySelectorAll('.seg button').forEach((button, index) => {
+      button.addEventListener('click', () => setStatus(s.uid, ['P', 'A', 'L'][index]));
+    });
     box.appendChild(d);
   });
   const t=students.length,
@@ -552,7 +556,8 @@ function renderManage(){
   students.forEach(s=>{
     const meta=[s.dept,s.year].filter(Boolean).join(' • ');
     const d=document.createElement('div'); d.className='mrow';
-    d.innerHTML='<span class="uid">'+esc(s.uid)+'</span><b>'+esc(s.name)+(meta?'<br><small style="color:#64748b">'+esc(meta)+'</small>':'')+'</b><button class="mini danger" onclick="removeStudent(\''+esc(s.uid)+'\');renderManage()">✕</button>';
+    d.innerHTML='<span class="uid">'+esc(s.uid)+'</span><b>'+esc(s.name)+(meta?'<br><small style="color:#64748b">'+esc(meta)+'</small>':'')+'</b><button class="mini danger">✕</button>';
+    d.querySelector('button').addEventListener('click', () => removeStudent(s.uid));
     box.appendChild(d);
   });
 }
