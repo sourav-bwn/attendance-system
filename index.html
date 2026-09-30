@@ -496,6 +496,8 @@ function unlockAdmin(){
 function normKey(k){ return String(k||'').trim().toLowerCase().replace(/[^a-z]/g,''); }
 function handleFile(inp){
   const f=inp.files[0]; if(!f) return;
+  pendingImport=[];
+  $('importBtn').disabled=true;
   $('preview').textContent='Reading '+f.name+'…';
   const rd=new FileReader();
   rd.onload=e=>{
