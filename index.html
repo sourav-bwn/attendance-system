@@ -324,7 +324,14 @@ function init(){
   loadDay(); render();
 }
 const dayKey = () => 'attease_'+$('attDate').value;
-function loadDay(){ try{ attendance=JSON.parse(localStorage.getItem(dayKey())||'{}'); }catch{ attendance={}; } }
+function loadDay(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(dayKey())||'{}');
+    attendance = saved && typeof saved==='object' && !Array.isArray(saved)
+      ? Object.fromEntries(Object.entries(saved).filter(([,status])=>['P','A','L'].includes(status)))
+      : {};
+  }catch{ attendance={}; }
+}
 function saveDay(){
   localStorage.setItem(dayKey(), JSON.stringify(attendance));
   const p=Object.keys(attendance).length;
