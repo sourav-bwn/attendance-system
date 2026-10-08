@@ -320,7 +320,14 @@ function init(){
     const s = JSON.parse(localStorage.getItem('attease_roster')||'null');
     students = Array.isArray(s) ? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
   }catch{ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); }
-  students = students.map(s=>({uid:s.uid||'',name:s.name||'',dept:s.dept||'',year:s.year||''}));
+  const seen=new Set();
+  students = students.filter(s=>s && typeof s==='object' && !Array.isArray(s))
+    .map(s=>({uid:String(s.uid??'').trim(),name:String(s.name??'').trim(),dept:String(s.dept??'').trim(),year:String(s.year??'').trim()}))
+    .filter(s=>{
+      const key=s.uid.toLowerCase();
+      if(!s.uid || !s.name || seen.has(key)) return false;
+      seen.add(key); return true;
+    });
   loadDay(); render();
 }
 const dayKey = () => 'attease_'+$('attDate').value;
@@ -375,7 +382,7 @@ function removeStudent(uid){
   students=students.filter(s=>s.uid!==uid); delete attendance[uid];
   saveRoster(); saveDay(); render(); if($('mgList')) renderManage();
 }
-function resetRoster(){ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); saveRoster(); render(); if($('mgList')) renderManage(); toast('Default restored'); }
+function resetRoster(){ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); attendance=Object.fromEntries(Object.entries(attendance).filter(([uid])=>students.some(s=>s.uid===uid))); saveRoster(); saveDay(); render(); if($('mgList')) renderManage(); toast('Default restored'); }
 function clearRoster(){ if(!confirm('Clear all?'))return; students=[];attendance={}; saveRoster(); saveDay(); render(); if($('mgList')) renderManage(); }
 
 const col = n => { let h=0; for(const c of n)h+=c.charCodeAt(0); return COLORS[h%COLORS.length]; };
@@ -481,7 +488,7 @@ function downloadCSV(){
   a.download='Attendance_'+($('attDate').value||todayStr())+'.csv'; a.click(); toast('CSV downloaded');
 }
 /* ---------- ADMIN (simple + password) ---------- */
-let pendingImport=[];
+let pendingImport=[], importVersion=0;
 function openAdmin(){
   $('adminModal').classList.add('open');
   const unlocked = sessionStorage.getItem('attease_admin')==='1';
@@ -490,7 +497,7 @@ function openAdmin(){
   if(unlocked){ renderManage(); $('preview').textContent='No file chosen yet.'; const b=$('importBtn'); if(b) b.disabled=true; pendingImport=[]; }
   else { setTimeout(()=>$('pinInput')&&$('pinInput').focus(),200); }
 }
-function closeAdmin(){ $('adminModal').classList.remove('open'); pendingImport=[]; const p=$('pinInput'); if(p) p.value=''; }
+function closeAdmin(){ $('adminModal').classList.remove('open'); importVersion++; pendingImport=[]; const p=$('pinInput'); if(p) p.value=''; }
 function unlockAdmin(){
   const v=($('pinInput').value||'').trim();
   const saved=localStorage.getItem('attease_pin')||DEFAULT_PIN;
@@ -503,11 +510,13 @@ function unlockAdmin(){
 function normKey(k){ return String(k||'').trim().toLowerCase().replace(/[^a-z]/g,''); }
 function handleFile(inp){
   const f=inp.files[0]; if(!f) return;
+  const version=++importVersion;
   pendingImport=[];
   $('importBtn').disabled=true;
   $('preview').textContent='Reading '+f.name+'…';
   const rd=new FileReader();
   rd.onload=e=>{
+    if(version!==importVersion) return;
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
@@ -540,6 +549,7 @@ function confirmImport(){
   toast('Added '+added+' students ✓');
 }
 function importPaste(){
+  importVersion++;
   const lines=$('pasteBox').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const out=[];
   for(const ln of lines){
