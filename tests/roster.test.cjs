@@ -32,3 +32,14 @@ test('numeric UIDs normalize to strings and empty saved rosters stay empty',()=>
 test('malformed saved roster still falls back to the default list',()=>{
   const x=setup('{broken'); x.run('init()');assert.equal(x.run('students.length'),12);
 });
+test('reset roster drops removed students marks and persists retained default marks',()=>{
+  const x=setup('[]');x.run("init(); attendance={CUSTOM:'A',STU001:'P'}; resetRoster()");
+  assert.deepEqual(x.json('attendance'),{STU001:'P'});
+  assert.deepEqual(JSON.parse(x.store[x.run('dayKey()')]),{STU001:'P'});
+  assert.equal(x.run('students.length'),12);
+});
+test('reset writes an empty day when no marked students remain',()=>{
+  const x=setup('[]');x.run("init(); attendance={CUSTOM:'L'}; resetRoster()");
+  assert.deepEqual(x.json('attendance'),{});
+  assert.equal(x.store[x.run('dayKey()')],'{}');
+});
