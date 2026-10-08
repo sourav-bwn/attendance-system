@@ -488,7 +488,7 @@ function downloadCSV(){
   a.download='Attendance_'+($('attDate').value||todayStr())+'.csv'; a.click(); toast('CSV downloaded');
 }
 /* ---------- ADMIN (simple + password) ---------- */
-let pendingImport=[];
+let pendingImport=[], importVersion=0;
 function openAdmin(){
   $('adminModal').classList.add('open');
   const unlocked = sessionStorage.getItem('attease_admin')==='1';
@@ -497,7 +497,7 @@ function openAdmin(){
   if(unlocked){ renderManage(); $('preview').textContent='No file chosen yet.'; const b=$('importBtn'); if(b) b.disabled=true; pendingImport=[]; }
   else { setTimeout(()=>$('pinInput')&&$('pinInput').focus(),200); }
 }
-function closeAdmin(){ $('adminModal').classList.remove('open'); pendingImport=[]; const p=$('pinInput'); if(p) p.value=''; }
+function closeAdmin(){ $('adminModal').classList.remove('open'); importVersion++; pendingImport=[]; const p=$('pinInput'); if(p) p.value=''; }
 function unlockAdmin(){
   const v=($('pinInput').value||'').trim();
   const saved=localStorage.getItem('attease_pin')||DEFAULT_PIN;
@@ -510,11 +510,13 @@ function unlockAdmin(){
 function normKey(k){ return String(k||'').trim().toLowerCase().replace(/[^a-z]/g,''); }
 function handleFile(inp){
   const f=inp.files[0]; if(!f) return;
+  const version=++importVersion;
   pendingImport=[];
   $('importBtn').disabled=true;
   $('preview').textContent='Reading '+f.name+'…';
   const rd=new FileReader();
   rd.onload=e=>{
+    if(version!==importVersion) return;
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
@@ -547,6 +549,7 @@ function confirmImport(){
   toast('Added '+added+' students ✓');
 }
 function importPaste(){
+  importVersion++;
   const lines=$('pasteBox').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const out=[];
   for(const ln of lines){
