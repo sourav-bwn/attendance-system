@@ -382,7 +382,7 @@ function removeStudent(uid){
   students=students.filter(s=>s.uid!==uid); delete attendance[uid];
   saveRoster(); saveDay(); render(); if($('mgList')) renderManage();
 }
-function resetRoster(){ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); saveRoster(); render(); if($('mgList')) renderManage(); toast('Default restored'); }
+function resetRoster(){ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); attendance=Object.fromEntries(Object.entries(attendance).filter(([uid])=>students.some(s=>s.uid===uid))); saveRoster(); saveDay(); render(); if($('mgList')) renderManage(); toast('Default restored'); }
 function clearRoster(){ if(!confirm('Clear all?'))return; students=[];attendance={}; saveRoster(); saveDay(); render(); if($('mgList')) renderManage(); }
 
 const col = n => { let h=0; for(const c of n)h+=c.charCodeAt(0); return COLORS[h%COLORS.length]; };
