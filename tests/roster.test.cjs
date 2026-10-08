@@ -43,3 +43,20 @@ test('reset writes an empty day when no marked students remain',()=>{
   assert.deepEqual(x.json('attendance'),{});
   assert.equal(x.store[x.run('dayKey()')],'{}');
 });
+function select(x,name){ x.context.input={files:[{name}],value:name};x.run('handleFile(input)'); }
+function finish(reader,n){reader.onload({target:{result:Uint8Array.of(n).buffer}});}
+test('an older file completion cannot replace the newest import preview',()=>{
+  const x=setup('[]'); select(x,'old.csv');select(x,'new.csv');
+  finish(x.readers[1],2);finish(x.readers[0],1);
+  assert.equal(x.run('pendingImport[0].uid'),'NEW');
+  assert.match(x.nodes.preview.innerHTML,/New Student/);assert.equal(x.nodes.importBtn.disabled,false);
+});
+test('old file completion leaves the newest file disabled while it is reading',()=>{
+  const x=setup('[]'); select(x,'old.csv');select(x,'new.csv');finish(x.readers[0],1);
+  assert.deepEqual(x.json('pendingImport'),[]);assert.equal(x.nodes.importBtn.disabled,true);
+  assert.equal(x.nodes.preview.textContent,'Reading new.csv…');
+});
+test('closing admin invalidates unfinished file callbacks',()=>{
+  const x=setup('[]');select(x,'old.csv');x.run('closeAdmin()');finish(x.readers[0],1);
+  assert.deepEqual(x.json('pendingImport'),[]);assert.equal(x.nodes.importBtn.disabled,true);
+});
