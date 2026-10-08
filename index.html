@@ -320,7 +320,14 @@ function init(){
     const s = JSON.parse(localStorage.getItem('attease_roster')||'null');
     students = Array.isArray(s) ? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
   }catch{ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); }
-  students = students.map(s=>({uid:s.uid||'',name:s.name||'',dept:s.dept||'',year:s.year||''}));
+  const seen=new Set();
+  students = students.filter(s=>s && typeof s==='object' && !Array.isArray(s))
+    .map(s=>({uid:String(s.uid??'').trim(),name:String(s.name??'').trim(),dept:String(s.dept??'').trim(),year:String(s.year??'').trim()}))
+    .filter(s=>{
+      const key=s.uid.toLowerCase();
+      if(!s.uid || !s.name || seen.has(key)) return false;
+      seen.add(key); return true;
+    });
   loadDay(); render();
 }
 const dayKey = () => 'attease_'+$('attDate').value;
