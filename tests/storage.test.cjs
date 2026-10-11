@@ -20,3 +20,11 @@ test('available storage still saves marks and class changes',()=>{
  const x=app();x.run("init(); setStatus('STU001','P')");assert.equal(JSON.parse(x.store[x.run('dayKey()')]).STU001,'P');
  x.nodes.className.listeners.input({target:{value:'New class'}});assert.equal(x.store.attease_class,'New class');
 });
+test('switching to an unsaved date clears the previous saved note',()=>{
+ const x=app();x.run("init(); setStatus('STU001','P')");x.nodes.attDate.value='2030-01-02';x.run('loadDay()');
+ assert.equal(x.nodes.saveNote.textContent,'No saved attendance');assert.equal(x.run('Object.keys(attendance).length'),0);
+});
+test('loading saved marks reports the loaded day rather than stale save time',()=>{
+ const x=app();x.run('init()');x.store[x.run('dayKey()')]='{"STU001":"P"}';x.run('loadDay()');
+ assert.equal(x.nodes.saveNote.textContent,'Loaded saved attendance');
+});
