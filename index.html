@@ -319,7 +319,7 @@ function writeStorage(key,value){
 }
 function init(){
   $('attDate').value = todayStr();
-  $('attDate').addEventListener('change', ()=>{ loadDay(); render(); });
+  $('attDate').addEventListener('change', ()=>{ if(!$('attDate').value) $('attDate').value=todayStr(); loadDay(); render(); });
   const sc = readStorage('attease_class');
   if(sc) $('className').value = sc;
   $('className').addEventListener('input', e=> writeStorage('attease_class', e.target.value));
