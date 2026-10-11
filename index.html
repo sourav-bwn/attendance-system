@@ -310,14 +310,21 @@ let students = [], attendance = {}, curFilter = 'all';
 const $ = id => document.getElementById(id);
 const todayStr = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 
+function readStorage(key){
+  try{ return localStorage.getItem(key); }catch{ return null; }
+}
+function writeStorage(key,value){
+  try{ localStorage.setItem(key,value); return true; }
+  catch{ toast('Storage unavailable. Changes stay in this tab only.'); return false; }
+}
 function init(){
   $('attDate').value = todayStr();
   $('attDate').addEventListener('change', ()=>{ loadDay(); render(); });
-  const sc = localStorage.getItem('attease_class');
+  const sc = readStorage('attease_class');
   if(sc) $('className').value = sc;
-  $('className').addEventListener('input', e=> localStorage.setItem('attease_class', e.target.value));
+  $('className').addEventListener('input', e=> writeStorage('attease_class', e.target.value));
   try{
-    const s = JSON.parse(localStorage.getItem('attease_roster')||'null');
+    const s = JSON.parse(readStorage('attease_roster')||'null');
     students = Array.isArray(s) ? s : JSON.parse(JSON.stringify(PRELOADED_STUDENTS));
   }catch{ students=JSON.parse(JSON.stringify(PRELOADED_STUDENTS)); }
   const seen=new Set();
@@ -333,18 +340,18 @@ function init(){
 const dayKey = () => 'attease_'+$('attDate').value;
 function loadDay(){
   try{
-    const saved=JSON.parse(localStorage.getItem(dayKey())||'{}');
+    const saved=JSON.parse(readStorage(dayKey())||'{}');
     attendance = saved && typeof saved==='object' && !Array.isArray(saved)
       ? Object.fromEntries(Object.entries(saved).filter(([,status])=>['P','A','L'].includes(status)))
       : {};
   }catch{ attendance={}; }
 }
 function saveDay(){
-  localStorage.setItem(dayKey(), JSON.stringify(attendance));
+  if(!writeStorage(dayKey(), JSON.stringify(attendance))){ $('saveNote').textContent='Not saved - storage unavailable'; return; }
   const p=Object.keys(attendance).length;
   $('saveNote').innerHTML = '● Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'<br><b>'+p+'/'+students.length+' marked</b>';
 }
-const saveRoster = () => localStorage.setItem('attease_roster', JSON.stringify(students));
+const saveRoster = () => writeStorage('attease_roster', JSON.stringify(students));
 
 function setStatus(uid,st){ attendance[uid]=st; saveDay(); render(); }
 function markAll(st){
@@ -429,11 +436,11 @@ function render(){
   if(Object.keys(attendance).length) saveDaySilent();
 }
 function saveDaySilent(){
-  localStorage.setItem(dayKey(), JSON.stringify(attendance));
+  if(!writeStorage(dayKey(), JSON.stringify(attendance))){ $('saveNote').textContent='Not saved - storage unavailable'; return; }
   $('saveNote').innerHTML='● Auto-saved<br><b>'+Object.keys(attendance).length+'/'+students.length+' marked</b>';
 }
 function getXlOpts(){
-  try{ return Object.assign({sno:false,uid:true,name:true,status:true,date:false,cls:false,stfmt:'short'}, JSON.parse(localStorage.getItem('attease_xl')||'{}')); }
+  try{ return Object.assign({sno:false,uid:true,name:true,status:true,date:false,cls:false,stfmt:'short'}, JSON.parse(readStorage('attease_xl')||'{}')); }
   catch{ return {sno:false,uid:true,name:true,status:true,date:false,cls:false,stfmt:'short'}; }
 }
 function statusText(st){
