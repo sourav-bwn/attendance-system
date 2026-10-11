@@ -28,3 +28,11 @@ test('loading saved marks reports the loaded day rather than stale save time',()
  const x=app();x.run('init()');x.store[x.run('dayKey()')]='{"STU001":"P"}';x.run('loadDay()');
  assert.equal(x.nodes.saveNote.textContent,'Loaded saved attendance');
 });
+test('clearing the date restores today before loading and saving attendance',()=>{
+ const x=app();x.run('init()');const today=x.nodes.attDate.value;x.nodes.attDate.value='';x.nodes.attDate.listeners.change();
+ assert.equal(x.nodes.attDate.value,today);x.run("setStatus('STU001','P')");assert.equal(x.store.attease_,undefined);
+ assert.equal(JSON.parse(x.store['attease_'+today]).STU001,'P');
+});
+test('an explicit selected date is kept',()=>{
+ const x=app();x.run('init()');x.nodes.attDate.value='2030-01-02';x.nodes.attDate.listeners.change();assert.equal(x.nodes.attDate.value,'2030-01-02');
+});
