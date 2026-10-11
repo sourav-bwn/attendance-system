@@ -345,6 +345,7 @@ function loadDay(){
       ? Object.fromEntries(Object.entries(saved).filter(([,status])=>['P','A','L'].includes(status)))
       : {};
   }catch{ attendance={}; }
+  $('saveNote').textContent=Object.keys(attendance).length ? 'Loaded saved attendance' : 'No saved attendance';
 }
 function saveDay(){
   if(!writeStorage(dayKey(), JSON.stringify(attendance))){ $('saveNote').textContent='Not saved - storage unavailable'; return; }
