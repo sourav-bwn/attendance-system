@@ -39,3 +39,13 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 Or just double-click `index.html`.
+
+## Tests
+
+Offline regression tests for the attendance, roster and storage logic (Node 18+, no dependencies):
+
+```bash
+node --test tests/attendance.test.cjs
+node --test tests/roster.test.cjs
+node --test tests/storage.test.cjs
+```
